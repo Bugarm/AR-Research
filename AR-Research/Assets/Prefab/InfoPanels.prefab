@@ -1273,6 +1273,7 @@ GameObject:
   - component: {fileID: 8251186690369494581}
   - component: {fileID: 4389433076553971640}
   - component: {fileID: 2506295903431895078}
+  - component: {fileID: 5270889782538142433}
   m_Layer: 5
   m_Name: Canvas
   m_TagString: Untagged
@@ -1385,6 +1386,41 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   m_RaycastTriggerInteraction: 1
+--- !u!114 &5270889782538142433
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7319698321518643764}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dc3eead434e820c4daa7119a05e307fe, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ARchanged
+  m_CreateButton: {fileID: 0}
+  m_DeleteButton: {fileID: 0}
+  m_ObjectMenu: {fileID: 0}
+  m_ObjectMenuAnimator: {fileID: 0}
+  m_CancelButton: {fileID: 0}
+  m_InteractionGroup: {fileID: 0}
+  m_TapStartPositionInput:
+    m_InputSourceMode: 2
+    m_InputAction:
+      m_Name: Tap Start Position
+      m_Type: 0
+      m_ExpectedControlType: Vector2
+      m_Id: 33fdfb04-9d3e-4c18-a760-40f198d3d794
+      m_Processors: 
+      m_Interactions: 
+      m_SingletonActionBindings: []
+      m_Flags: 0
+    m_InputActionReference: {fileID: 2494954584338170553, guid: c348712bda248c246b8c49b3db54643f, type: 3}
+    m_ObjectReferenceObject: {fileID: 0}
+    m_ManualValue: {x: 0, y: 0}
+  m_SpawnedObjectSelectionChanged:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!1 &7391188334956183888
 GameObject:
   m_ObjectHideFlags: 0
