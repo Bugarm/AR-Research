@@ -1,12 +1,15 @@
 {
   "dependencies": {
     "com.unity.2d.sprite": "1.0.0",
+    "com.unity.device-simulator.devices": "1.0.1",
     "com.unity.feature.ar": "1.0.2",
     "com.unity.feature.development": "1.0.2",
     "com.unity.inputsystem": "1.19.0",
     "com.unity.learn.iet-framework": "5.0.3",
     "com.unity.mobile.android-logcat": "1.4.7",
     "com.unity.multiplayer.center": "1.0.1",
+    "com.unity.perception": "1.0.0-preview.1",
+    "com.unity.render-pipelines.high-definition": "17.4.0",
     "com.unity.render-pipelines.universal": "17.4.0",
     "com.unity.timeline": "1.8.12",
     "com.unity.xr.arcore": "6.4.2",

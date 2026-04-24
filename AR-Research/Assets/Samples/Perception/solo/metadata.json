@@ -1,0 +1,23 @@
+{
+  "unityVersion": "6000.4.2f1",
+  "perceptionVersion": "1.0.0-preview.1",
+  "renderPipeline": "HDRP",
+  "simulationStartTime": "4/18/2026 12:26:52 AM",
+  "totalFrames": 143,
+  "totalSequences": 1,
+  "sensors": [
+    "camera"
+  ],
+  "metricCollectors": [],
+  "simulationEndTime": "4/18/2026 12:26:59 AM",
+  "annotators": [
+    {
+      "name": "bounding box",
+      "type": "type.unity.com/unity.solo.BoundingBox2DAnnotation"
+    },
+    {
+      "name": "semantic segmentation",
+      "type": "type.unity.com/unity.solo.SemanticSegmentationAnnotation"
+    }
+  ]
+}

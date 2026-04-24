@@ -1,0 +1,72 @@
+{
+  "frame": 140,
+  "sequence": 0,
+  "step": 139,
+  "timestamp": 2.30739927,
+  "captures": [
+    {
+      "@type": "type.unity.com/unity.solo.RGBCamera",
+      "id": "camera",
+      "description": "",
+      "position": [
+        0.0,
+        2.5,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        -0.7071068,
+        0.7071068,
+        0.0
+      ],
+      "velocity": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "acceleration": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "filename": "step139.camera.png",
+      "imageFormat": "Png",
+      "dimension": [
+        483.0,
+        610.0
+      ],
+      "projection": "Perspective",
+      "matrix": [
+        3.4698987,
+        0.0,
+        0.0,
+        0.0,
+        2.74747729,
+        0.0,
+        0.0,
+        0.0,
+        -1.0006001
+      ],
+      "annotations": [
+        {
+          "@type": "type.unity.com/unity.solo.BoundingBox2DAnnotation",
+          "id": "bounding box",
+          "sensorId": "camera",
+          "description": "Produces 2D bounding box annotations for all visible objects that bear a label defined in this labeler's associated label configuration."
+        },
+        {
+          "@type": "type.unity.com/unity.solo.SemanticSegmentationAnnotation",
+          "id": "semantic segmentation",
+          "sensorId": "camera",
+          "description": "Generates a semantic segmentation image for each captured frame. Each object is rendered to the semantic segmentation image using the color associated with it based on this labeler's associated semantic segmentation label configuration. Semantic segmentation images are saved to the dataset in PNG format. Please note that only one SemanticSegmentationLabeler can render at once across all cameras.",
+          "imageFormat": "Png",
+          "dimension": [
+            483.0,
+            610.0
+          ],
+          "filename": "step139.camera.semantic segmentation.png"
+        }
+      ]
+    }
+  ]
+}

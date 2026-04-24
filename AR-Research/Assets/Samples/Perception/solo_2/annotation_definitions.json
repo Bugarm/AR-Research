@@ -1,0 +1,40 @@
+{
+  "annotationDefinitions": [
+    {
+      "@type": "type.unity.com/unity.solo.BoundingBox2DAnnotation",
+      "id": "bounding box",
+      "description": "Produces 2D bounding box annotations for all visible objects that bear a label defined in this labeler's associated label configuration.",
+      "spec": [
+        {
+          "label_id": 1,
+          "label_name": "cup_paper_01"
+        },
+        {
+          "label_id": 2,
+          "label_name": "cup_paper_02"
+        },
+        {
+          "label_id": 3,
+          "label_name": "tincan_01"
+        },
+        {
+          "label_id": 4,
+          "label_name": "bottle_glass_01"
+        },
+        {
+          "label_id": 5,
+          "label_name": "bottle"
+        },
+        {
+          "label_id": 6,
+          "label_name": "bottle_glass_01_prefab"
+        }
+      ]
+    },
+    {
+      "@type": "type.unity.com/unity.solo.SemanticSegmentationAnnotation",
+      "id": "semantic segmentation",
+      "description": "Generates a semantic segmentation image for each captured frame. Each object is rendered to the semantic segmentation image using the color associated with it based on this labeler's associated semantic segmentation label configuration. Semantic segmentation images are saved to the dataset in PNG format. Please note that only one SemanticSegmentationLabeler can render at once across all cameras."
+    }
+  ]
+}
