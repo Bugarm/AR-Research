@@ -429,13 +429,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3583619555576856804}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: -0.7071068, z: 0, w: 0.7071068}
-  m_LocalPosition: {x: 0.2, y: 0.057, z: 0.813}
+  m_LocalRotation: {x: -0.7071068, y: 0, z: 0, w: 0.7071068}
+  m_LocalPosition: {x: 0.2, y: 0.685, z: 0.813}
   m_LocalScale: {x: 1.35, y: 1.35, z: 1.35}
   m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 4365528357719543085}
-  m_LocalEulerAnglesHint: {x: 0, y: -90, z: 0}
+  m_LocalEulerAnglesHint: {x: -90, y: 0, z: 0}
 --- !u!114 &7027700216025616306
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -448,7 +448,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c39bb24e2bd7a482ca08117fb44b8e44, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_Image: {fileID: 2800000, guid: 53bff4c18319d614ba0116b8106f92b6, type: 3}
+  m_Image: {fileID: 2800000, guid: de5ca7d7883cc4c44b5bff07d2d2c14f, type: 3}
   m_ImagePhysicalSizeMeters: {x: 0.5, y: 0.5}
   m_QuadMesh: {fileID: 0}
   m_QuadMaterial: {fileID: 0}
@@ -1204,7 +1204,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_CameraStartingPose:
     position: {x: 0.21, y: 0.7, z: -0.21}
-    rotation: {x: 0.26193652, y: 0, z: 0, w: 0.9650851}
+    rotation: {x: 0, y: 0, z: 0, w: 1}
   m_CameraMovementBounds:
     m_Center: {x: 0.044999838, y: 0.545, z: 0.00000011920929}
     m_Extent: {x: 1.3000004, y: 0.5500002, z: 1.2500005}

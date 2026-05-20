@@ -1,0 +1,6 @@
+E:\GitDesktop\AR-Research\AR-Research\BenchmarkSuite1\obj\Debug\net9.0\BenchmarkSuite1.csproj.AssemblyReference.cache
+E:\GitDesktop\AR-Research\AR-Research\BenchmarkSuite1\obj\Debug\net9.0\BenchmarkSuite1.GeneratedMSBuildEditorConfig.editorconfig
+E:\GitDesktop\AR-Research\AR-Research\BenchmarkSuite1\obj\Debug\net9.0\BenchmarkSuite1.AssemblyInfoInputs.cache
+E:\GitDesktop\AR-Research\AR-Research\BenchmarkSuite1\obj\Debug\net9.0\BenchmarkSuite1.AssemblyInfo.cs
+E:\GitDesktop\AR-Research\AR-Research\BenchmarkSuite1\obj\Debug\net9.0\BenchmarkSuite1.csproj.CoreCompileInputs.cache
+E:\GitDesktop\AR-Research\AR-Research\BenchmarkSuite1\obj\Debug\net9.0\BenchmarkSuite1.sourcelink.json
