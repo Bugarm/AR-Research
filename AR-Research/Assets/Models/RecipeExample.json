@@ -1,0 +1,8 @@
+{
+  "name": "Honey Garlic Chicken and Broccoli",
+  "ingredients": [
+    {"name": "Garlic", "desc": "3 garlic cloves, finely chopped"},
+    {"name": "Chicken", "desc": "1 lb. boneless, skinless chicken thighs or breasts, cut into 1/2 pieces"},
+    {"name": "Broccoli", "desc": "2 medium heads of broccoli, cut into bite-sized florets"}
+  ]
+}

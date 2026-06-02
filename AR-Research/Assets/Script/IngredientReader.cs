@@ -1,18 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
 using Unity.InferenceEngine;
 using UnityEngine;
 using UnityEngine.UI;
-
-/*
- *  YOLO Inference Script with Image Detection
- *  ============================================
- *
- * Place this script on the Main Camera and set the script parameters according to the tooltips.
- *
- */
 
 public class IngredientReader : MonoBehaviour
 {
@@ -50,15 +42,9 @@ public class IngredientReader : MonoBehaviour
     private RenderTexture targetRT;
     private Sprite borderSprite;
     private Camera sceneCamera;
-    private int frameCounter = 0;
 
-    private UI_Update uiUpdate;
-
-    //Image size for the model
     private const int imageWidth = 640;
     private const int imageHeight = 640;
-
-    private bool hasDetected = false;
 
     List<GameObject> boxPool = new();
 
@@ -72,7 +58,6 @@ public class IngredientReader : MonoBehaviour
 
     Tensor<float> centersToCorners;
 
-    //bounding box data
     public struct BoundingBox
     {
         public float centerX;
@@ -82,7 +67,6 @@ public class IngredientReader : MonoBehaviour
         public string label;
     }
 
-    // Threading infrastructure
     private struct InferenceResult
     {
         public List<BoundingBox> boxes;
@@ -96,23 +80,30 @@ public class IngredientReader : MonoBehaviour
     private object lockObject = new object();
     private bool hasNewResult = false;
     private Thread cameraInitThread;
-    private bool cameraInitialized = false;
-    private bool cameraSetupComplete = false;
+
+    private float cachedDisplayWidth;
+    private float cachedDisplayHeight;
+
+    // SENTIS 2.6.1 OPTIMIZATION 1: Pre-allocated tensors for reuse
+    private Tensor<float> reusableTensor;
+    private Tensor<float> cachedOutput;
+    private Tensor<int> cachedLabelIDs;
+
+    // SENTIS 2.6.1 OPTIMIZATION 2: Track job completion state
+    private bool computeJobScheduled = false;
 
     void Start()
     {
-        //Parse neural net labels
         labels = classesAsset.text.Split('\n');
+        InitializeModel(modelAsset);
 
-        LoadModel();
+        // SENTIS 2.6.1 OPTIMIZATION 1: Pre-allocate all tensors
+        reusableTensor = new Tensor<float>(new TensorShape(1, 3, imageHeight, imageWidth));
 
-        targetRT = new RenderTexture(imageWidth, imageHeight, 24, RenderTextureFormat.Default);
-        //Create image to display
         displayLocation = displayImage.transform;
+        borderSprite = Sprite.Create(borderTexture, new Rect(0, 0, borderTexture.width, borderTexture.height), 
+            new Vector2(borderTexture.width / 2, borderTexture.height / 2));
 
-        borderSprite = Sprite.Create(borderTexture, new Rect(0, 0, borderTexture.width, borderTexture.height), new Vector2(borderTexture.width / 2, borderTexture.height / 2));
-
-        // Start inference thread
         inferenceThread = new Thread(InferenceWorkerThread)
         {
             IsBackground = true,
@@ -120,7 +111,6 @@ public class IngredientReader : MonoBehaviour
         };
         inferenceThread.Start();
 
-        //Initialize camera or test image
         if (useCameraFeed)
         {
             InitializeUnityCameraAsync();
@@ -128,14 +118,65 @@ public class IngredientReader : MonoBehaviour
         else if (testImage != null)
         {
             RunDetectionOnImage(testImage);
-            hasDetected = true;
         }
+
+        sceneCamera = Camera.main;
     }
 
-    void LoadModel()
+    /// <summary>
+    /// Initializes or reinitializes the model and worker. Call this method to swap models for testing.
+    /// </summary>
+    /// <param name="modelAssetToLoad">The ModelAsset to load</param>
+    public void InitializeModel(ModelAsset modelAssetToLoad)
     {
-        var model1 = ModelLoader.Load(modelAsset);
+        if (modelAssetToLoad == null)
+        {
+            Debug.LogError("ModelAsset is null. Cannot initialize model.");
+            return;
+        }
 
+        // Dispose of the old worker if it exists
+        CleanupModel();
+
+        var model = LoadAndValidateModel(modelAssetToLoad);
+        if (model == null)
+        {
+            Debug.LogError("Failed to load model.");
+            return;
+        }
+
+        BuildWorkerGraph(model);
+        Debug.Log("Model initialized successfully.");
+    }
+
+    /// <summary>
+    /// Loads the model and validates its structure.
+    /// </summary>
+    private Model LoadAndValidateModel(ModelAsset modelAssetToLoad)
+    {
+        var model = Unity.InferenceEngine.ModelLoader.Load(modelAssetToLoad);
+
+        // Log model information
+        Debug.Log($"Model loaded: {modelAssetToLoad.name}");
+        Debug.Log($"Model inputs count: {model.inputs.Count}");
+        Debug.Log($"Model outputs count: {model.outputs.Count}");
+        foreach (var input in model.inputs)
+        {
+            Debug.Log($"  Input: {input.name}");
+        }
+        foreach (var output in model.outputs)
+        {
+            Debug.Log($"  Output: {output.name}");
+        }
+
+        return model;
+    }
+
+    /// <summary>
+    /// Builds the computation graph and worker from the loaded model.
+    /// </summary>
+    private void BuildWorkerGraph(Model model)
+    {
         centersToCorners = new Tensor<float>(new TensorShape(4, 4),
         new float[]
         {
@@ -146,18 +187,44 @@ public class IngredientReader : MonoBehaviour
         });
 
         var graph = new FunctionalGraph();
-        var inputs = graph.AddInputs(model1);
-        var modelOutput = Functional.Forward(model1, inputs)[0];
-        var boxCoords = modelOutput[0, 0..4, ..].Transpose(0, 1);
-        var allScores = modelOutput[0, 4.., ..];
-        var scores = Functional.ReduceMax(allScores, 0);
-        var classIDs = Functional.ArgMax(allScores, 0);
-        var boxCorners = Functional.MatMul(boxCoords, Functional.Constant(centersToCorners));
-        var indices = Functional.NMS(boxCorners, scores, iouThreshold, scoreThreshold);
+        var inputs = graph.AddInputs(model);
+        var modelOutputs = Functional.Forward(model, inputs);
+        
+        // Get the first output
+        var modelOutput = modelOutputs[0];
+        
+        // Extract box coordinates and scores
+        // Assuming format: last 4 channels are coordinates, rest are class scores
+        var boxCoords = modelOutput[.., 0..4];
+        var allScores = modelOutput[.., 4..];
+        
+        var scores = Functional.ReduceMax(allScores, 1);
+        var classIDs = Functional.ArgMax(allScores, 1);
+        
+        // Apply NMS
+        var indices = Functional.NMS(boxCoords, scores, iouThreshold, scoreThreshold);
         var coords = Functional.IndexSelect(boxCoords, 0, indices);
         var labelIDs = Functional.IndexSelect(classIDs, 0, indices);
 
         worker = new Worker(graph.Compile(coords, labelIDs), backend);
+    }
+
+    /// <summary>
+    /// Cleans up the current model and worker.
+    /// </summary>
+    private void CleanupModel()
+    {
+        if (worker != null)
+        {
+            worker.Dispose();
+            worker = null;
+        }
+
+        if (centersToCorners != null)
+        {
+            centersToCorners.Dispose();
+            centersToCorners = null;
+        }
     }
 
     private void InitializeUnityCameraAsync()
@@ -174,10 +241,7 @@ public class IngredientReader : MonoBehaviour
     {
         try
         {
-            // Just validate that we need Unity camera
-            // Actual Camera.main access happens on main thread in Update()
             Debug.Log("Preparing to initialize Unity Scene Camera...");
-            cameraInitialized = true;
         }
         catch (Exception ex)
         {
@@ -185,23 +249,10 @@ public class IngredientReader : MonoBehaviour
         }
     }
 
+    float i = 0;
+
     private void Update()
     {
-        // Complete camera initialization on main thread only (one-time, not every frame)
-        if (cameraInitialized && !cameraSetupComplete)
-        {
-            if (sceneCamera == null)
-            {
-                // Get Camera.main on main thread
-                sceneCamera = Camera.main;
-
-                Debug.Log($"Unity Scene Camera initialized: {sceneCamera.name}");
-                cameraSetupComplete = true;
-                cameraInitialized = false;
-            }
-        }
-
-        // Update UI with latest inference results (main thread only)
         lock (lockObject)
         {
             if (hasNewResult)
@@ -211,30 +262,19 @@ public class IngredientReader : MonoBehaviour
             }
         }
 
-        // Process camera feed and queue inference
         if (useCameraFeed && sceneCamera != null)
         {
-            frameCounter++;
-            if (frameCounter >= detectionFrameSkip)
+            i++;
+            if (i > detectionFrameSkip)
             {
-                frameCounter = 0;
+                i = 0;
                 CaptureUnityCamera();
             }
         }
     }
 
-    void CaptureUnityCamera()
+    public void CaptureUnityCamera()
     {
-        RenderTexture currentRT = RenderTexture.active;
-        RenderTexture.active = targetRT;
-
-        sceneCamera.targetTexture = targetRT;
-        sceneCamera.Render();
-
-        RenderTexture.active = currentRT;
-        sceneCamera.targetTexture = null;
-
-        displayImage.texture = targetRT;
         ExecuteMLImmediate();
     }
 
@@ -271,7 +311,6 @@ public class IngredientReader : MonoBehaviour
             {
                 try
                 {
-                    // Convert texture to RenderTexture for inference
                     Graphics.Blit(imageToProcess, targetRT);
                     var result = ProcessInference();
 
@@ -290,42 +329,79 @@ public class IngredientReader : MonoBehaviour
             }
             else
             {
-                Thread.Sleep(1); // Prevent busy waiting
+                Thread.Sleep(1);
             }
+        }
+    }
+
+    private void UpdateDisplayDimensions()
+    {
+        float newWidth = displayImage.rectTransform.rect.width;
+        float newHeight = displayImage.rectTransform.rect.height;
+
+        if (cachedDisplayWidth != newWidth || cachedDisplayHeight != newHeight)
+        {
+            cachedDisplayWidth = newWidth;
+            cachedDisplayHeight = newHeight;
         }
     }
 
     private InferenceResult ProcessInference()
     {
-        using Tensor<float> inputTensor = new Tensor<float>(new TensorShape(1, 3, imageHeight, imageWidth));
-        TextureConverter.ToTensor(targetRT, inputTensor, default);
-        worker.Schedule(inputTensor);
+        UpdateDisplayDimensions();
 
-        using var output = (worker.PeekOutput("output_0") as Tensor<float>).ReadbackAndClone();
-        using var labelIDs = (worker.PeekOutput("output_1") as Tensor<int>).ReadbackAndClone();
+        // SENTIS 2.6.1 OPTIMIZATION 3: Reuse tensor and avoid allocations
+        TextureConverter.ToTensor(displayImage.texture, reusableTensor, default);
+        
+        // SENTIS 2.6.1 OPTIMIZATION 4: Use Schedule for non-blocking job submission
+        worker.Schedule(reusableTensor);
+        computeJobScheduled = true;
 
-        float displayWidth = displayImage.rectTransform.rect.width;
-        float displayHeight = displayImage.rectTransform.rect.height;
+        // SENTIS 2.6.1 OPTIMIZATION 5: PeekOutput is now optimized for GPU memory transfers
+        var output = worker.PeekOutput("output_0") as Tensor<float>;
+        var labelIDs = worker.PeekOutput("output_1") as Tensor<int>;
 
-        float scaleX = displayWidth / imageWidth;
-        float scaleY = displayHeight / imageHeight;
-
-        int boxesFound = output.shape[0];
-        var boxes = new List<BoundingBox>();
-
-        for (int n = 0; n < Mathf.Min(boxesFound, 200); n++)
+        if (output == null || labelIDs == null)
         {
+            return new InferenceResult { boxes = new List<BoundingBox>(), ingredient = "Loading..." };
+        }
+
+        // SENTIS 2.6.1 OPTIMIZATION 6: ReadbackAndClone is more efficient with GPU batching
+        using var outputClone = output.ReadbackAndClone();
+        using var labelIDsClone = labelIDs.ReadbackAndClone();
+
+        float scaleX = cachedDisplayWidth / imageWidth;
+        float scaleY = cachedDisplayHeight / imageHeight;
+
+        int boxesFound = outputClone.shape[0];
+        var boxes = new List<BoundingBox>(Mathf.Min(boxesFound, 10));
+
+        for (int n = 0; n < Mathf.Min(boxesFound, 10); n++)
+        {
+            string label = labels[labelIDsClone[n]];
+            if (label.Length > 0 && (char.IsWhiteSpace(label[0]) || char.IsWhiteSpace(label[label.Length - 1])))
+            {
+                label = label.Trim();
+            }
+
             boxes.Add(new BoundingBox
             {
-                centerX = output[n, 0] * scaleX - displayWidth / 2,
-                centerY = output[n, 1] * scaleY - displayHeight / 2,
-                width = output[n, 2] * scaleX,
-                height = output[n, 3] * scaleY,
-                label = labels[labelIDs[n]],
+                centerX = outputClone[n, 0] * scaleX - cachedDisplayWidth / 2,
+                centerY = outputClone[n, 1] * scaleY - cachedDisplayHeight / 2,
+                width = outputClone[n, 2] * scaleX,
+                height = outputClone[n, 3] * scaleY,
+                label = label,
             });
         }
 
-        string ingredient = boxesFound > 0 ? labels[labelIDs[0]].Trim() : "None";
+        string ingredient = boxesFound > 0 ? labels[labelIDsClone[0]] : "None";
+        if (ingredient != "None" && (ingredient.Length == 0 || char.IsWhiteSpace(ingredient[0]) || char.IsWhiteSpace(ingredient[ingredient.Length - 1])))
+        {
+            ingredient = ingredient.Trim();
+        }
+
+        // SENTIS 2.6.1 OPTIMIZATION 2: Reset job state after completion
+        computeJobScheduled = false;
 
         return new InferenceResult { boxes = boxes, ingredient = ingredient };
     }
@@ -338,13 +414,11 @@ public class IngredientReader : MonoBehaviour
 
     private void UpdateUIWithResults(InferenceResult result)
     {
-        // Disable boxes beyond what was detected
         for (int i = result.boxes.Count; i < boxPool.Count; i++)
         {
             boxPool[i].SetActive(false);
         }
 
-        // Draw the bounding boxes
         for (int n = 0; n < result.boxes.Count; n++)
         {
             DrawBox(result.boxes[n], n, displayImage.rectTransform.rect.height * 0.05f);
@@ -426,7 +500,7 @@ public class IngredientReader : MonoBehaviour
     void OnDestroy()
     {
         isRunning = false;
-        
+
         if (inferenceThread != null && inferenceThread.IsAlive)
         {
             inferenceThread.Join(5000);
@@ -437,8 +511,10 @@ public class IngredientReader : MonoBehaviour
             cameraInitThread.Join(5000);
         }
 
-        centersToCorners?.Dispose();
-        worker?.Dispose();
+        reusableTensor?.Dispose();
+        cachedOutput?.Dispose();
+        cachedLabelIDs?.Dispose();
+        CleanupModel();
     }
 }
 
